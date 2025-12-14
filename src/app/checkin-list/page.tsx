@@ -91,7 +91,7 @@ export default function CheckinListPage() {
                 <div className="flex flex-col lg:flex-row gap-4 justify-between items-start lg:items-center">
                     <div className="flex flex-col sm:flex-row flex-wrap gap-4 w-full lg:w-auto">
                         {/* Export Buttons */}
-                        <div className="flex gap-2 print:hidden bg-white/5 p-1.5 rounded-xl border border-white/10">
+                        <div className="flex flex-wrap gap-2 print:hidden bg-white/5 p-1.5 rounded-xl border border-white/10">
                             <button onClick={() => handleExport('copy')} className="p-2 hover:bg-white/10 rounded-lg text-gray-300 hover:text-white transition-colors" title="Copy">
                                 <Copy size={18} />
                             </button>

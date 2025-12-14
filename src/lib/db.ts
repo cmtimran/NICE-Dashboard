@@ -2,14 +2,14 @@
 import sql from 'mssql';
 
 const config: sql.config = {
-    user: process.env.DB_USER || 'NICE',
-    password: process.env.DB_PASSWORD || '#NIniAll@h#r@sulceCE!',
-    server: process.env.DB_SERVER || '103.191.178.238',
+    user: process.env.DB_USER!,
+    password: process.env.DB_PASSWORD!,
+    server: process.env.DB_SERVER!,
     port: parseInt(process.env.DB_PORT || '1433'),
-    database: process.env.DB_DATABASE || 'KHRLINT',
+    database: process.env.DB_DATABASE!,
     options: {
-        encrypt: false, // Use true for Azure, false for local/remote dev servers usually
-        trustServerCertificate: true, // Change to true for local dev / self-signed certs
+        encrypt: false,
+        trustServerCertificate: true,
     },
 };
 

@@ -96,14 +96,14 @@ export default function ForecastPage() {
                     <p className="text-gray-400">Occupancy trends and future availability</p>
                 </div>
 
-                <div className="flex items-center gap-3 bg-white/5 p-2 rounded-xl border border-white/10">
+                <div className="flex flex-wrap items-center gap-3 bg-white/5 p-2 rounded-xl border border-white/10 w-full md:w-auto">
                     <div className="flex items-center gap-2 px-2">
                         <Calendar size={16} className="text-blue-400" />
                         <input
                             type="date"
                             value={startDate}
                             onChange={(e) => setStartDate(e.target.value)}
-                            className="bg-transparent text-white text-sm outline-none"
+                            className="bg-transparent text-white text-sm outline-none w-28 md:w-auto"
                         />
                     </div>
                     <span className="text-gray-500">-</span>
@@ -112,12 +112,12 @@ export default function ForecastPage() {
                             type="date"
                             value={endDate}
                             onChange={(e) => setEndDate(e.target.value)}
-                            className="bg-transparent text-white text-sm outline-none"
+                            className="bg-transparent text-white text-sm outline-none w-28 md:w-auto"
                         />
                     </div>
                     <button
                         onClick={fetchData}
-                        className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                        className="bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors w-full md:w-auto"
                     >
                         Update
                     </button>
@@ -149,7 +149,7 @@ export default function ForecastPage() {
             </div>
 
             {/* Export Actions */}
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-start md:justify-end gap-2">
                 <button onClick={() => handleExport('copy')} className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium transition-colors">
                     <Copy size={16} /> Copy
                 </button>

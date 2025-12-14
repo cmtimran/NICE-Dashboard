@@ -161,12 +161,12 @@ export default function Dashboard() {
       animate="show"
       className="space-y-8"
     >
-      <header className="flex justify-between items-center">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold text-white tracking-tight">Dashboard Overview</h1>
           <p className="text-gray-400 mt-1">Real-time hotel statistics and performance</p>
         </div>
-        <div className="flex gap-4 items-center">
+        <div className="flex gap-4 items-center w-full md:w-auto justify-end">
           <div className="text-right hidden md:block">
             <div className="text-2xl font-bold text-white font-mono">
               {new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
@@ -174,6 +174,10 @@ export default function Dashboard() {
             <div className="text-sm text-gray-400 font-medium uppercase tracking-wide">
               {new Date().toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
             </div>
+          </div>
+          {/* Mobile Date/Time (Simpler version) */}
+          <div className="md:hidden text-gray-400 text-sm">
+            {new Date().toLocaleDateString('en-US', { weekday: 'short', day: 'numeric', month: 'short' })}
           </div>
         </div>
       </header>

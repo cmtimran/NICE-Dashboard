@@ -108,7 +108,7 @@ export default function CheckoutListPage() {
                 </div>
 
                 {/* Export Toolbar */}
-                <div className="flex gap-2 print:hidden">
+                <div className="flex flex-wrap gap-2 print:hidden">
                     <button onClick={() => handleExport('copy')} className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors" title="Copy">
                         <Copy size={16} />
                     </button>
