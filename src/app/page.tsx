@@ -7,6 +7,7 @@ import {
   DollarSign, CreditCard, TrendingUp
 } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, BarChart, Bar, RadialBarChart, RadialBar } from 'recharts';
+import AIAssistant from '@/components/AIAssistant';
 
 interface DashboardStats {
   inhouse: number;
@@ -655,6 +656,8 @@ export default function Dashboard() {
           </div>
         </div>
       </motion.div>
+
+      <AIAssistant data={{ stats, revenue, forecast, revenueTrend, nationalityData, topCorporates, roomTypeStats, leadTimeData, sourceData, housekeepingData, outletData, ageData }} />
 
     </motion.div >
   );

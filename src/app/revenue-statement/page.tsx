@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Search, Printer, FileText, Copy, FileSpreadsheet, File, Download } from 'lucide-react';
+import { Calendar, Search, Printer, FileText, Copy, FileSpreadsheet, File, Download, Mail, Send } from 'lucide-react';
 // @ts-ignore
 import { useReactToPrint } from 'react-to-print';
 import { exportToCSV, exportToExcel, exportToPDF, copyToClipboard } from '@/lib/ExportUtils';
@@ -14,6 +14,12 @@ export default function RevenueStatementPage() {
     const [error, setError] = useState<string | null>(null);
 
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+
+    // Mail State
+    const [showMailModal, setShowMailModal] = useState(false);
+    const [email, setEmail] = useState('');
+    const [sendingMail, setSendingMail] = useState(false);
+    const [mailStatus, setMailStatus] = useState<'idle' | 'success' | 'error'>('idle');
 
     const handlePrint = useReactToPrint({
         contentRef: componentRef,
@@ -207,6 +213,39 @@ export default function RevenueStatementPage() {
         }
     };
 
+    const handleSendMail = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setSendingMail(true);
+        setMailStatus('idle');
+
+        try {
+            const res = await fetch('/api/send-email', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    email,
+                    subject: `Revenue Statement - ${date}`,
+                    data: data // Sending the raw data for the backend to format or attach
+                    // In a real app, you might generate the PDF here and upload it, or generate on server.
+                    // For now, we'll send the data JSON or summary text.
+                })
+            });
+            const result = await res.json();
+            if (result.error) throw new Error(result.error);
+            setMailStatus('success');
+            setTimeout(() => {
+                setShowMailModal(false);
+                setMailStatus('idle');
+                setEmail('');
+            }, 2000);
+        } catch (err: any) {
+            console.error(err);
+            setMailStatus('error');
+        } finally {
+            setSendingMail(false);
+        }
+    };
+
 
     const fetchData = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -301,8 +340,69 @@ export default function RevenueStatementPage() {
                     <button onClick={() => handlePrint && handlePrint()} className="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 text-white">
                         <Printer size={16} /> <span className="hidden sm:inline">Print</span>
                     </button>
+                    <button onClick={() => setShowMailModal(true)} className="px-3 py-1 bg-purple-600 hover:bg-purple-500 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 text-white">
+                        <Mail size={16} /> <span className="hidden sm:inline">Mail</span>
+                    </button>
                 </div>
             </header>
+
+            {/* Mail Modal */}
+            {showMailModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+                    <motion.div
+                        initial={{ scale: 0.9, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        className="bg-[#1e293b] border border-white/10 rounded-2xl p-6 w-full max-w-md shadow-2xl"
+                    >
+                        <h3 className="text-xl font-bold text-white mb-4 flex items-center gap-2">
+                            <Mail className="text-purple-400" /> Send Revenue Report
+                        </h3>
+
+                        {mailStatus === 'success' ? (
+                            <div className="text-green-400 text-center py-8">
+                                <Send size={48} className="mx-auto mb-4 opacity-50" />
+                                <p className="text-lg font-bold">Email Sent Successfully!</p>
+                            </div>
+                        ) : (
+                            <form onSubmit={handleSendMail} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm text-gray-400 mb-1">Recipient Email</label>
+                                    <input
+                                        type="email"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        className="w-full bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-purple-500"
+                                        placeholder="manager@example.com"
+                                        required
+                                    />
+                                </div>
+
+                                {mailStatus === 'error' && (
+                                    <p className="text-red-400 text-sm">Failed to send email. Please try again.</p>
+                                )}
+
+                                <div className="flex gap-3 mt-6">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowMailModal(false)}
+                                        className="flex-1 px-4 py-2 bg-white/5 hover:bg-white/10 text-gray-300 rounded-lg transition-colors"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={sendingMail}
+                                        className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        {sendingMail ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Send size={16} />}
+                                        Send Report
+                                    </button>
+                                </div>
+                            </form>
+                        )}
+                    </motion.div>
+                </div>
+            )}
 
             <motion.div
                 initial={{ y: 20, opacity: 0 }}

@@ -64,7 +64,7 @@ export default function Sidebar({ isOpen }: SidebarProps) {
 
     return (
         <div className={`h-screen w-64 bg-white/10 backdrop-blur-lg border-r border-white/20 text-white flex flex-col fixed left-0 top-0 z-50 shadow-xl overflow-y-auto transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-            <div className="p-6 text-2xl font-bold tracking-wider border-b border-white/10 flex items-center gap-2">
+            <div className="p-6 pl-16 text-2xl font-bold tracking-wider border-b border-white/10 flex items-center gap-2">
                 <span className="text-blue-400">Khairul</span>Int
             </div>
 

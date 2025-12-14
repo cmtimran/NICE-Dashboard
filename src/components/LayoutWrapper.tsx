@@ -33,10 +33,9 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
             {/* Toggle Button */}
             <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className={`fixed top-4 z-[60] p-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-all duration-300 shadow-lg border border-white/10 ${isSidebarOpen ? (isMobile ? 'left-[15rem]' : 'left-[16.5rem]') : 'left-4'
-                    }`}
+                className="fixed top-4 left-4 z-[70] p-2 bg-slate-800 text-white rounded-lg hover:bg-slate-700 transition-colors shadow-lg border border-white/10"
             >
-                {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+                {isSidebarOpen ? <Menu size={20} /> : <Menu size={20} />}
             </button>
 
             {/* Mobile Backdrop */}
@@ -47,10 +46,10 @@ export default function LayoutWrapper({ children }: { children: React.ReactNode 
                 />
             )}
 
-            {/* Sidebar Container - Fixed on mobile, Flex item on Desktop if needed or handled via margin */}
+            {/* Sidebar Container */}
             <div className={`fixed inset-y-0 left-0 z-[50] transition-transform duration-300 ease-in-out ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
                 }`}>
-                <Sidebar isOpen={true} /> {/* Sidebar fits in the container */}
+                <Sidebar isOpen={isSidebarOpen} />
             </div>
 
             {/* Main Content */}
