@@ -6,7 +6,7 @@ import {
   Users, LogIn, LogOut, BedDouble, AlertCircle, XCircle,
   DollarSign, CreditCard, TrendingUp
 } from 'lucide-react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend, BarChart, Bar, RadialBarChart, RadialBar } from 'recharts';
 
 interface DashboardStats {
   inhouse: number;
@@ -21,6 +21,7 @@ interface RevenueStats {
   dailyCollection: number;
   todayRevenue: number;
   mtdRevenue: number;
+  monthlyTarget: number;
 }
 
 // Custom Tick Component for Multiline X-Axis
@@ -63,25 +64,58 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const [nationalityData, setNationalityData] = useState<any[]>([]);
+  const [topCorporates, setTopCorporates] = useState<any[]>([]);
+  const [roomTypeStats, setRoomTypeStats] = useState<any[]>([]);
+  const [leadTimeData, setLeadTimeData] = useState<any[]>([]);
+  const [sourceData, setSourceData] = useState<any[]>([]);
+  const [housekeepingData, setHousekeepingData] = useState<any[]>([]);
+  const [outletData, setOutletData] = useState<any[]>([]);
+  const [ageData, setAgeData] = useState<any[]>([]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [statsRes, revenueRes, forecastRes, trendRes] = await Promise.all([
+        const [statsRes, revenueRes, forecastRes, trendRes, natRes, corpRes, roomRes, leadRes, sourceRes, hkRes, outletRes, ageRes] = await Promise.all([
           fetch('/api/dashboard/stats'),
           fetch('/api/dashboard/revenue'),
           fetch('/api/forecast?startDate=' + new Date().toISOString().split('T')[0] + '&endDate=' + new Date(Date.now() + 10 * 86400000).toISOString().split('T')[0]),
-          fetch('/api/dashboard/revenue-trend?days=7')
+          fetch('/api/dashboard/revenue-trend?days=7'),
+          fetch('/api/dashboard/nationality-stats'),
+          fetch('/api/dashboard/top-corporates'),
+          fetch('/api/dashboard/room-type-stats'),
+          fetch('/api/dashboard/booking-lead-time'),
+          fetch('/api/dashboard/source-of-business'),
+          fetch('/api/dashboard/housekeeping-status'),
+          fetch('/api/dashboard/outlet-stats'),
+          fetch('/api/dashboard/age-stats')
         ]);
 
         const statsData = await statsRes.json();
         const revenueData = await revenueRes.json();
         const forecastRaw = await forecastRes.json();
         const trendData = await trendRes.json();
+        const natData = await natRes.json();
+        const corpData = await corpRes.json();
+        const roomData = await roomRes.json();
+        const leadData = await leadRes.json();
+        const sourceDataRaw = await sourceRes.json();
+        const hkData = await hkRes.json();
+        const outletDataRaw = await outletRes.json();
+        const ageDataRaw = await ageRes.json();
 
         if (statsData.error) throw new Error(statsData.details);
 
         setStats(statsData);
         setRevenue(revenueData);
+        if (Array.isArray(natData)) setNationalityData(natData);
+        if (Array.isArray(corpData)) setTopCorporates(corpData);
+        if (Array.isArray(roomData)) setRoomTypeStats(roomData);
+        if (Array.isArray(leadData)) setLeadTimeData(leadData);
+        if (Array.isArray(sourceDataRaw)) setSourceData(sourceDataRaw);
+        if (Array.isArray(hkData)) setHousekeepingData(hkData);
+        if (Array.isArray(outletDataRaw)) setOutletData(outletDataRaw);
+        if (Array.isArray(ageDataRaw)) setAgeData(ageDataRaw);
 
         if (Array.isArray(forecastRaw)) {
           setForecast(forecastRaw.map((f: { date: string; occupancyPercent: number }) => ({
@@ -210,6 +244,16 @@ export default function Dashboard() {
           <p className="text-3xl font-bold text-white mt-1">
             ৳ {revenue?.mtdRevenue.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
           </p>
+          <div className="mt-4 w-full bg-black/20 rounded-full h-2">
+            <div
+              className="bg-blue-400 h-2 rounded-full transition-all duration-1000"
+              style={{ width: `${Math.min(100, ((revenue?.mtdRevenue || 0) / (revenue?.monthlyTarget || 1)) * 100)}%` }}
+            ></div>
+          </div>
+          <div className="flex justify-between mt-1 text-xs text-blue-200/60">
+            <span>{((revenue?.mtdRevenue || 0) / (revenue?.monthlyTarget || 1) * 100).toFixed(1)}% of Target</span>
+            <span>Goal: {((revenue?.monthlyTarget || 5000000) / 100000).toFixed(1)}L</span>
+          </div>
         </motion.div>
 
         <motion.div variants={item} className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 backdrop-blur-md border border-purple-500/20 p-6 rounded-2xl relative overflow-hidden group hover:border-purple-500/40 transition-all">
@@ -349,51 +393,248 @@ export default function Dashboard() {
         </motion.div>
       </div>
 
-      {/* Revenue Trend Chart (Stacked) */}
-      <motion.div variants={item} className="bg-white/5 border border-white/10 rounded-2xl p-6">
-        <h3 className="text-xl font-bold text-white mb-6">Revenue Breakdown (Last 7 Days)</h3>
-        <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={revenueTrend}>
-              <defs>
-                <linearGradient id="colorRoom" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="colorFnb" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-                <linearGradient id="colorOther" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-              <XAxis
-                dataKey="combinedDate"
-                stroke="#9ca3af"
-                tick={<CustomAxisTick />}
-                height={50}
-                interval={0}
-              />
-              <YAxis stroke="#9ca3af" />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }}
-                formatter={(value: number, name: string) => [`৳ ${value.toLocaleString()}`, name]}
-              />
-              <Area type="monotone" dataKey="roomRevenue" stackId="1" stroke="#10b981" fill="url(#colorRoom)" name="Room" />
-              <Area type="monotone" dataKey="fnbRevenue" stackId="1" stroke="#3b82f6" fill="url(#colorFnb)" name="F&B" />
-              <Area type="monotone" dataKey="otherRevenue" stackId="1" stroke="#8b5cf6" fill="url(#colorOther)" name="Other" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </motion.div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Revenue Trend Chart (Stacked) */}
+        <motion.div variants={item} className="bg-white/5 border border-white/10 rounded-2xl p-6">
+          <h3 className="text-xl font-bold text-white mb-6">Revenue Breakdown (Last 7 Days)</h3>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={revenueTrend}>
+                <defs>
+                  <linearGradient id="colorRoom" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorFnb" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="colorOther" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                <XAxis
+                  dataKey="combinedDate"
+                  stroke="#9ca3af"
+                  tick={<CustomAxisTick />}
+                  height={50}
+                  interval={0}
+                />
+                <YAxis stroke="#9ca3af" />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }}
+                  formatter={(value: number, name: string) => [`৳ ${value.toLocaleString()}`, name]}
+                />
+                <Area type="monotone" dataKey="roomRevenue" stackId="1" stroke="#10b981" fill="url(#colorRoom)" name="Room" />
+                <Area type="monotone" dataKey="fnbRevenue" stackId="1" stroke="#3b82f6" fill="url(#colorFnb)" name="F&B" />
+                <Area type="monotone" dataKey="otherRevenue" stackId="1" stroke="#8b5cf6" fill="url(#colorOther)" name="Other" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
 
-      {/* Quick Status / Recent Activity Placeholder (Kept for layout, maybe move to side if needed) */}
+        {/* Nationality Pie Chart */}
+        <motion.div variants={item} className="bg-white/5 border border-white/10 rounded-2xl p-6">
+          <h3 className="text-xl font-bold text-white mb-6">Guest Demographics (Top Countries)</h3>
+          <div className="h-[300px] w-full flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={nationalityData}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, percent }: any) => `${name} ${((percent || 0) * 100).toFixed(0)}%`}
+                  outerRadius={100}
+                  fill="#8884d8"
+                  dataKey="value"
+                >
+                  {nationalityData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'][index % 5]} />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }}
+                />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Top Corporates Chart */}
+        <motion.div variants={item} className="bg-white/5 border border-white/10 rounded-2xl p-6">
+          <h3 className="text-xl font-bold text-white mb-6">Top 5 Corporate Clients (Active)</h3>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={topCorporates} layout="vertical" margin={{ left: 40 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" horizontal={true} vertical={false} />
+                <XAxis type="number" stroke="#9ca3af" hide />
+                <YAxis dataKey="name" type="category" stroke="#9ca3af" width={100} tick={{ fontSize: 12 }} />
+                <Tooltip
+                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                  contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }}
+                />
+                <Bar dataKey="value" fill="#ec4899" radius={[0, 4, 4, 0]} name="Bookings" barSize={32} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+
+        {/* Room Type Stats Chart */}
+        <motion.div variants={item} className="bg-white/5 border border-white/10 rounded-2xl p-6">
+          <h3 className="text-xl font-bold text-white mb-6">Room Type Distribution</h3>
+          <div className="h-[300px] w-full flex items-center justify-center">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={roomTypeStats}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={100}
+                  paddingAngle={5}
+                  dataKey="value"
+                >
+                  {roomTypeStats.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={['#6366f1', '#8b5cf6', '#ec4899', '#f43f5e', '#10b981'][index % 5]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }} />
+                <Legend />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Booking Pace (Lead Time) */}
+        <motion.div variants={item} className="bg-white/5 border border-white/10 rounded-2xl p-6">
+          <h3 className="text-xl font-bold text-white mb-6">Booking Lead Time</h3>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={leadTimeData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                <XAxis dataKey="leadTimeGroup" stroke="#9ca3af" fontSize={10} />
+                <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }} />
+                <Bar dataKey="count" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="Bookings" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+
+        {/* Source of Business */}
+        <motion.div variants={item} className="bg-white/5 border border-white/10 rounded-2xl p-6">
+          <h3 className="text-xl font-bold text-white mb-6">Source of Business</h3>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={sourceData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={0}
+                  outerRadius={80}
+                  paddingAngle={2}
+                  dataKey="value"
+                  nameKey="sourceGroup"
+                >
+                  {sourceData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={['#f59e0b', '#10b981', '#3b82f6'][index % 3]} />
+                  ))}
+                </Pie>
+                <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }} />
+                <Legend verticalAlign="bottom" height={36} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+
+        {/* Housekeeping Status */}
+        <motion.div variants={item} className="bg-white/5 border border-white/10 rounded-2xl p-6">
+          <h3 className="text-xl font-bold text-white mb-6">Housekeeping Status</h3>
+          <div className="h-[250px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={housekeepingData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={90}
+                  paddingAngle={5}
+                  dataKey="value"
+                  nameKey="status"
+                >
+                  {housekeepingData.map((entry, index) => {
+                    let color = '#9ca3af';
+                    if (entry.status === 'Occupied') color = '#3b82f6';
+                    if (entry.status === 'Vacant Clean') color = '#10b981';
+                    if (entry.status === 'Out of Order') color = '#ef4444';
+                    if (entry.status === 'Out of Service') color = '#ec4899';
+                    return <Cell key={`cell-${index}`} fill={color} />;
+                  })}
+                </Pie>
+                <Tooltip contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }} />
+                <Legend verticalAlign="bottom" height={36} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Outlet Sales */}
+        <motion.div variants={item} className="bg-white/5 border border-white/10 rounded-2xl p-6">
+          <h3 className="text-xl font-bold text-white mb-6">Month to Date Sales by Outlet</h3>
+          <div className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={outletData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} />
+                <YAxis stroke="#9ca3af" />
+                <Tooltip
+                  cursor={{ fill: 'rgba(255,255,255,0.05)' }}
+                  contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }}
+                  formatter={(value: any) => `৳ ${value}`}
+                />
+                <Bar dataKey="value" fill="#ec4899" radius={[4, 4, 0, 0]} name="Sales" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </motion.div>
+
+        {/* Age Demographics */}
+        <motion.div variants={item} className="bg-white/5 border border-white/10 rounded-2xl p-6">
+          <h3 className="text-xl font-bold text-white mb-6">In-house Guest Age Groups</h3>
+          <div className="h-[300px] w-full">
+            {ageData.length > 0 && ageData.some(d => d.value > 0) ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={ageData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" vertical={false} />
+                  <XAxis dataKey="ageGroup" stroke="#9ca3af" fontSize={12} />
+                  <YAxis stroke="#9ca3af" />
+                  <Tooltip cursor={{ fill: 'rgba(255,255,255,0.05)' }} contentStyle={{ backgroundColor: '#1e293b', borderColor: '#334155', color: '#fff' }} />
+                  <Bar dataKey="value" fill="#3b82f6" radius={[4, 4, 0, 0]} name="Guests" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full w-full flex items-center justify-center text-gray-400 text-sm">
+                There is no birthdate data for currently in-house guests.
+              </div>
+            )}
+          </div>
+        </motion.div>
+      </div>
+
+      {/* Quick Status */}
       <motion.div variants={item} className="bg-white/5 border border-white/10 rounded-2xl p-6">
         <h3 className="text-xl font-bold text-white mb-6">Quick Status</h3>
-        <div className="grid grid-cols-2 gap-4"> {/* Changed to grid for better compact layout */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5">
             <div className="flex items-center gap-3">
               <div className="bg-purple-500/20 p-2 rounded-lg text-purple-400">
@@ -415,6 +656,6 @@ export default function Dashboard() {
         </div>
       </motion.div>
 
-    </motion.div>
+    </motion.div >
   );
 }

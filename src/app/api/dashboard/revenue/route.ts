@@ -114,7 +114,8 @@ export async function GET(request: Request) {
         return NextResponse.json({
             dailyCollection,
             todayRevenue,
-            mtdRevenue
+            mtdRevenue,
+            monthlyTarget: 5000000
         });
 
     } catch (error: any) {

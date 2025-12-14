@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
-import { Calendar, Search, Printer, FileText, Copy, FileSpreadsheet, File } from 'lucide-react';
+import { Calendar, Search, Printer, FileText, Copy, FileSpreadsheet, File, Download } from 'lucide-react';
 // @ts-ignore
 import { useReactToPrint } from 'react-to-print';
 import { exportToCSV, exportToExcel, exportToPDF, copyToClipboard } from '@/lib/ExportUtils';
@@ -81,27 +81,129 @@ export default function RevenueStatementPage() {
     const handleExport = (type: 'csv' | 'excel' | 'pdf' | 'copy') => {
         if (!data) return;
 
-        // Simplified Export Data
-        const exportData = [
-            { Item: 'Room Revenue', Today: data.today.roomRent.amount, MTD: data.mtd.roomRent.amount },
-            { Item: 'F&B Revenue', Today: data.today.restaurant.amount, MTD: data.mtd.restaurant.amount },
-            // Add more summary lines
-            { Item: 'Grand Total', Today: 'TODO', MTD: 'TODO' }
-        ];
-        // NOTE: Fully mapping this large report in a single edit block is risky for the LLM output length.
-        // I will focus on implementing the UI buttons and the Print first, which solves 90% of the visual need.
-        // I will map a few key fields for export validation.
+        // Helper calculations (duplicated from render logic for fidelity)
+        const calculateSubTotal = (stats: any, keys: string[], adjKey?: string) => {
+            let total = 0;
+            keys.forEach(k => { total += (stats[k]?.amount || 0); });
+            if (adjKey) total -= (stats[adjKey]?.amount || 0);
+            return total;
+        };
+
+        const calculateSectionTotals = (stats: any, keys: string[], adjKey?: string) => {
+            let net = 0, sc = 0, vat = 0;
+            keys.forEach(k => {
+                net += stats[k]?.amount || 0;
+                sc += stats[k]?.service || 0;
+                vat += stats[k]?.vat || 0;
+            });
+            if (adjKey) {
+                net -= stats[adjKey]?.amount || 0;
+                sc -= stats[adjKey]?.service || 0;
+                vat -= stats[adjKey]?.vat || 0;
+            }
+            return { net, sc, vat, grand: net + sc + vat };
+        };
+
+        // Prepare rows matching the visual table
+        const rows = [];
+
+        // Room Revenue
+        rows.push({ Description: '--- ROOM REVENUE ---', Today: '', MTD: '' });
+        rows.push({ Description: 'Room Charge', Today: data.today.roomRent.amount, MTD: data.mtd.roomRent.amount });
+        rows.push({ Description: 'Extra Bed', Today: data.today.extraBed.amount, MTD: data.mtd.extraBed.amount });
+        rows.push({ Description: 'Adjustment', Today: `(${data.today.roomAdj.amount})`, MTD: `(${data.mtd.roomAdj.amount})` });
+        rows.push({
+            Description: 'Sub Total (Room)',
+            Today: calculateSubTotal(data.today, ['roomRent', 'extraBed'], 'roomAdj'),
+            MTD: calculateSubTotal(data.mtd, ['roomRent', 'extraBed'], 'roomAdj')
+        });
+
+        // F&B Revenue
+        rows.push({ Description: '--- F&B REVENUE ---', Today: '', MTD: '' });
+        rows.push({ Description: 'Restaurant', Today: data.today.restaurant.amount + data.today.outside.amount, MTD: data.mtd.restaurant.amount + data.mtd.outside.amount });
+        rows.push({ Description: 'Room Service', Today: data.today.roomService.amount, MTD: data.mtd.roomService.amount });
+        rows.push({ Description: 'Banquet F&B', Today: data.today.banquetFood.amount, MTD: data.mtd.banquetFood.amount });
+        rows.push({ Description: 'Adjustment', Today: `(${data.today.fnbAdj.amount})`, MTD: `(${data.mtd.fnbAdj.amount})` });
+        rows.push({
+            Description: 'Sub Total (F&B)',
+            Today: calculateSubTotal(data.today, ['restaurant', 'outside', 'roomService', 'banquetFood', 'confFood'], 'fnbAdj'),
+            MTD: calculateSubTotal(data.mtd, ['restaurant', 'outside', 'roomService', 'banquetFood', 'confFood'], 'fnbAdj')
+        });
+
+        // Hall & Equipment
+        rows.push({ Description: '--- HALL & EQUIPMENT ---', Today: '', MTD: '' });
+        rows.push({ Description: 'Banquet Rent', Today: data.today.banquetHall.amount, MTD: data.mtd.banquetHall.amount });
+        rows.push({ Description: 'Equipment', Today: data.today.equipment.amount, MTD: data.mtd.equipment.amount });
+        rows.push({ Description: 'Adjustment', Today: `(${data.today.hallAdj.amount})`, MTD: `(${data.mtd.hallAdj.amount})` });
+        rows.push({
+            Description: 'Sub Total (Hall)',
+            Today: calculateSubTotal(data.today, ['banquetHall', 'confHall', 'equipment'], 'hallAdj'),
+            MTD: calculateSubTotal(data.mtd, ['banquetHall', 'confHall', 'equipment'], 'hallAdj')
+        });
+
+        // Housekeeping
+        rows.push({ Description: '--- HOUSEKEEPING ---', Today: '', MTD: '' });
+        rows.push({ Description: 'Mini-Fridge', Today: data.today.minibar.amount, MTD: data.mtd.minibar.amount });
+        rows.push({ Description: 'Laundry', Today: data.today.laundry.amount, MTD: data.mtd.laundry.amount });
+        rows.push({ Description: 'Adjustment', Today: `(${data.today.hkAdj.amount})`, MTD: `(${data.mtd.hkAdj.amount})` });
+        rows.push({
+            Description: 'Sub Total (HK)',
+            Today: calculateSubTotal(data.today, ['minibar', 'laundry'], 'hkAdj'),
+            MTD: calculateSubTotal(data.mtd, ['minibar', 'laundry'], 'hkAdj')
+        });
+
+        // Others
+        rows.push({ Description: '--- OTHERS ---', Today: '', MTD: '' });
+        rows.push({ Description: 'Transportation', Today: data.today.transport.amount, MTD: data.mtd.transport.amount });
+        rows.push({ Description: 'Telephone', Today: data.today.telephone.amount, MTD: data.mtd.telephone.amount });
+        rows.push({ Description: 'Pool/Health/SPA', Today: data.today.healthClub.amount + data.today.swimmingPool.amount + data.today.spa.amount, MTD: data.mtd.healthClub.amount + data.mtd.swimmingPool.amount + data.mtd.spa.amount });
+        rows.push({ Description: 'Misc/Damage', Today: data.today.misc.amount + data.today.damage.amount, MTD: data.mtd.misc.amount + data.mtd.damage.amount });
+        rows.push({ Description: 'Adjustment', Today: `(${data.today.othersAdj.amount})`, MTD: `(${data.mtd.othersAdj.amount})` });
+        rows.push({
+            Description: 'Sub Total (Others)',
+            Today: calculateSubTotal(data.today, ['transport', 'telephone', 'businessCenter', 'driverAcc', 'healthClub', 'swimmingPool', 'spa', 'giftShop', 'ticketing', 'damage', 'misc'], 'othersAdj'),
+            MTD: calculateSubTotal(data.mtd, ['transport', 'telephone', 'businessCenter', 'driverAcc', 'healthClub', 'swimmingPool', 'spa', 'giftShop', 'ticketing', 'damage', 'misc'], 'othersAdj')
+        });
+
+        // Grand Totals
+        const todayRoom = calculateSectionTotals(data.today, ['roomRent', 'extraBed'], 'roomAdj');
+        const todayFnb = calculateSectionTotals(data.today, ['restaurant', 'outside', 'roomService', 'banquetFood', 'confFood'], 'fnbAdj');
+        const todayHall = calculateSectionTotals(data.today, ['banquetHall', 'confHall', 'equipment'], 'hallAdj');
+        const todayHk = calculateSectionTotals(data.today, ['minibar', 'laundry'], 'hkAdj');
+        const todayOther = calculateSectionTotals(data.today, ['transport', 'telephone', 'businessCenter', 'driverAcc', 'healthClub', 'swimmingPool', 'spa', 'giftShop', 'ticketing', 'damage', 'misc'], 'othersAdj');
+
+        const mtdRoom = calculateSectionTotals(data.mtd, ['roomRent', 'extraBed'], 'roomAdj');
+        const mtdFnb = calculateSectionTotals(data.mtd, ['restaurant', 'outside', 'roomService', 'banquetFood', 'confFood'], 'fnbAdj');
+        const mtdHall = calculateSectionTotals(data.mtd, ['banquetHall', 'confHall', 'equipment'], 'hallAdj');
+        const mtdHk = calculateSectionTotals(data.mtd, ['minibar', 'laundry'], 'hkAdj');
+        const mtdOther = calculateSectionTotals(data.mtd, ['transport', 'telephone', 'businessCenter', 'driverAcc', 'healthClub', 'swimmingPool', 'spa', 'giftShop', 'ticketing', 'damage', 'misc'], 'othersAdj');
+
+        const todayNet = todayRoom.net + todayFnb.net + todayHall.net + todayHk.net + todayOther.net;
+        const todaySc = todayRoom.sc + todayFnb.sc + todayHall.sc + todayHk.sc + todayOther.sc;
+        const todayVat = todayRoom.vat + todayFnb.vat + todayHall.vat + todayHk.vat + todayOther.vat;
+        const todayGrand = todayNet + todaySc + todayVat;
+
+        const mtdNet = mtdRoom.net + mtdFnb.net + mtdHall.net + mtdHk.net + mtdOther.net;
+        const mtdSc = mtdRoom.sc + mtdFnb.sc + mtdHall.sc + mtdHk.sc + mtdOther.sc;
+        const mtdVat = mtdRoom.vat + mtdFnb.vat + mtdHall.vat + mtdHk.vat + mtdOther.vat;
+        const mtdGrand = mtdNet + mtdSc + mtdVat;
+
+        rows.push({ Description: '--- TOTALS ---', Today: '', MTD: '' });
+        rows.push({ Description: 'Total (Net)', Today: todayNet, MTD: mtdNet });
+        rows.push({ Description: 'Service Charge', Today: todaySc, MTD: mtdSc });
+        rows.push({ Description: 'Govt. VAT', Today: todayVat, MTD: mtdVat });
+        rows.push({ Description: 'GRAND TOTAL', Today: todayGrand, MTD: mtdGrand });
 
         const filename = `Revenue_Statement_${date}`;
 
         switch (type) {
-            case 'csv': exportToCSV(exportData, filename); break;
-            case 'excel': exportToExcel(exportData, filename); break;
+            case 'csv': exportToCSV(rows, filename); break;
+            case 'excel': exportToExcel(rows, filename); break;
             case 'pdf':
-                const headers = Object.keys(exportData[0]);
-                exportToPDF(headers, exportData, `Revenue Statement ${date}`, filename);
+                const headers = ['Description', 'Today', 'MTD'];
+                exportToPDF(headers, rows, `Revenue Statement ${date}`, filename);
                 break;
-            case 'copy': copyToClipboard(exportData); break;
+            case 'copy': copyToClipboard(rows); break;
         }
     };
 
@@ -182,21 +284,22 @@ export default function RevenueStatementPage() {
                 </div>
 
                 {/* Export Toolbar */}
-                <div className="flex flex-wrap gap-2 print:hidden">
-                    <button onClick={() => handleExport('copy')} className="flex items-center gap-2 px-3 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors" title="Copy">
-                        <Copy size={16} />
+                <div className="flex flex-wrap gap-2 print:hidden bg-white/5 p-1.5 rounded-xl border border-white/10">
+                    <button onClick={() => handleExport('copy')} className="p-2 hover:bg-white/10 rounded-lg text-gray-300 hover:text-white transition-colors" title="Copy">
+                        <Copy size={18} />
                     </button>
-                    <button onClick={() => handleExport('csv')} className="flex items-center gap-2 px-3 py-2 bg-green-700 hover:bg-green-600 rounded-lg text-sm transition-colors" title="CSV">
-                        <FileText size={16} />
+                    <button onClick={() => handleExport('csv')} className="p-2 hover:bg-white/10 rounded-lg text-blue-400 hover:text-blue-300 transition-colors" title="CSV">
+                        <FileText size={18} />
                     </button>
-                    <button onClick={() => handleExport('excel')} className="flex items-center gap-2 px-3 py-2 bg-emerald-700 hover:bg-emerald-600 rounded-lg text-sm transition-colors" title="Excel">
-                        <FileSpreadsheet size={16} />
+                    <button onClick={() => handleExport('excel')} className="p-2 hover:bg-white/10 rounded-lg text-emerald-400 hover:text-emerald-300 transition-colors" title="Excel">
+                        <FileSpreadsheet size={18} />
                     </button>
-                    <button onClick={() => handleExport('pdf')} className="flex items-center gap-2 px-3 py-2 bg-red-700 hover:bg-red-600 rounded-lg text-sm transition-colors" title="PDF">
-                        <File size={16} />
+                    <button onClick={() => handleExport('pdf')} className="p-2 hover:bg-white/10 rounded-lg text-red-400 hover:text-red-300 transition-colors" title="PDF">
+                        <Download size={18} />
                     </button>
-                    <button onClick={() => handlePrint && handlePrint()} className="flex items-center gap-2 px-4 py-2 bg-blue-700 hover:bg-blue-600 rounded-lg text-sm font-medium transition-colors">
-                        <Printer size={16} /> Print
+                    <div className="w-px bg-white/10 mx-1" />
+                    <button onClick={() => handlePrint && handlePrint()} className="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded-lg text-sm font-medium transition-colors flex items-center gap-2 text-white">
+                        <Printer size={16} /> <span className="hidden sm:inline">Print</span>
                     </button>
                 </div>
             </header>

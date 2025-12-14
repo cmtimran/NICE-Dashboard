@@ -21,10 +21,29 @@ const menuItems = [
         icon: '🏨',
         path: '#',
         submenu: [
+            { title: 'Posting Date Wise Res.', path: '/posting-date-res' },
+            { title: 'Reservation Cancel', path: '/reservation-cancel' },
             { title: 'Expected Arrival', path: '/expected-arrival' },
+            { title: 'Reser. Exp. Departure', path: '/reservation-exp-departure' },
+            { title: 'Inhouse Exp. Departure', path: '/inhouse-exp-departure' },
             { title: 'Checkin List', path: '/checkin-list' },
             { title: 'Checkout List', path: '/checkout-list' },
             { title: 'Daily Guest List', path: '/daily-guest-list' },
+            { title: 'Pre. Daily Guest List', path: '/pre-daily-guest-list' },
+            { title: 'Police Report', path: '/police-report' },
+            { title: 'Local Police Report', path: '/local-police-report' },
+        ]
+    },
+    {
+        title: 'Accounts & Revenue',
+        icon: '💰',
+        path: '#',
+        submenu: [
+            { title: 'Guest Ledger', path: '/guest-ledger' },
+            { title: 'Pre. Guest Ledger', path: '/pre-guest-ledger' },
+            { title: 'Room Revenue', path: '/room-revenue' },
+            { title: 'Daily Collection', path: '/daily-collection' },
+            { title: 'Daily Collection All', path: '/daily-collection-all' },
             { title: 'Revenue Statement', path: '/revenue-statement' },
         ]
     },
